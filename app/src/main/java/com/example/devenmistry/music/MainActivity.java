@@ -22,6 +22,8 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+//        android.resource://com.example.devenmistry.music/2131427328 : The audio file in the raw folder
+
 public class MainActivity extends AppCompatActivity
 {
     MediaPlayer mysong, myPlayer;
@@ -146,9 +148,6 @@ public class MainActivity extends AppCompatActivity
 
             }
         });
-
-
-
 
     }
     public void ppz(){
