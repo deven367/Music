@@ -1,14 +1,24 @@
 package com.example.devenmistry.music;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
 import android.media.PlaybackParams;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +26,7 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -32,12 +43,40 @@ public class MainActivity extends AppCompatActivity
     SeekBar seek;
     Handler h;
     Runnable rr;
-    String custURL = "";
+    String custURL = "", filepath, path;
     ImageView playIcon;
     ImageButton folder;
     AudioTrack audio;
     ImageButton ib;
     Uri audiouri;
+
+    // Storage Permissions
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    /**
+     * Checks if the app has permission to write to device storage
+     *
+     * If the app does not has permission then the user will be prompted to grant permissions
+     *
+     * @param activity
+     */
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE
+            );
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -62,6 +101,8 @@ public class MainActivity extends AppCompatActivity
         if (audiouri != null) {
             myPlayer = MediaPlayer.create(MainActivity.this, audiouri);
             myPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        } else if(audiouri == null && custURL != "") {
+            audiouri = Uri.parse(custURL);
         }
 
         playIcon = findViewById(R.id.playIcon);
@@ -74,6 +115,7 @@ public class MainActivity extends AppCompatActivity
                 startActivityForResult(i, 1);
 
                 Log.i("mediayolo2", custURL);
+                Log.i("mediayolo2.5", audiouri.toString());
 
 //                myPlayer.prepareAsync();
             }
@@ -102,8 +144,10 @@ public class MainActivity extends AppCompatActivity
 
 //        audiouri = Uri.parse("android.resource://"+getPackageName()+"/raw/audio.mp3");
 
+/*
         h = new Handler();
         seek = (SeekBar)findViewById(R.id.seekBar);
+*/
 
 /*
         seek.setMax(myPlayer.getDuration());
@@ -112,6 +156,7 @@ public class MainActivity extends AppCompatActivity
 */
 
 
+/*
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -131,18 +176,49 @@ public class MainActivity extends AppCompatActivity
 
             }
         });
+*/
 
 
         playIcon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.i("Null", audiouri.toString());
+//                Log.i("Null", audiouri.toString());
 //                seek.refreshDrawableState();
                 if (audiouri != null) {
                     myPlayer = MediaPlayer.create(MainActivity.this, audiouri);
-                    myPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                    myPlayer.start();
-                    playCycle();
+//                    myPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+
+                    path = Environment.getExternalStorageDirectory()+"/"+getRealPathFromURI(audiouri);
+                    Toast.makeText(getApplicationContext(), path, Toast.LENGTH_LONG).show();
+//                    if (path == null) {
+//                        Log.i("NullPath", "path is null");
+//                    } else {
+//                        Log.i("IT IS NULL", "IT IS NULL");
+//                    }
+
+                    try {
+                        myPlayer.reset();
+                        myPlayer.setDataSource(path);
+                        myPlayer.prepareAsync();
+                    } catch (IllegalArgumentException e) {
+                        e.printStackTrace();
+                        Log.e("TAG", Log.getStackTraceString(e));
+                    } catch (Exception e) {
+                        System.out.println("Exception of type : " + e.toString());
+                        e.printStackTrace();
+                        Log.e("TAG", Log.getStackTraceString(e));
+                    }
+
+                    myPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                        @Override
+                        public void onPrepared(MediaPlayer mediaPlayer) {
+                            Log.i("MBC","Media Buffering Completed!");
+                            myPlayer.start();
+                        }
+                    });
+
+//                    myPlayer.start();
+//                    playCycle();
                     ppz();
                 }
 
@@ -194,6 +270,18 @@ public class MainActivity extends AppCompatActivity
             myPlayer.start();
         }
 
+    }
+
+    private String getRealPathFromURI(Uri contentUri) {
+        filepath = "";
+
+        File file = new File(audiouri.getPath());//create path from uri
+        final String[] split = file.getPath().split(":");//split the path.
+        filepath = split[1];//assign it to a string(your choice).
+
+//        Toast.makeText(getApplicationContext(), filepath, Toast.LENGTH_LONG).show();
+
+        return filepath;
     }
 
     @Override
